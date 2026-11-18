@@ -1,0 +1,121 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+entity tb_ordenador_CeleYLucas is
+end entity tb_ordenador_CeleYLucas;
+
+architecture sim of tb_ordenador_CeleYLucas is
+
+    -- Parámetros reducidos para simulación rápida (puedes cambiarlos a 512 si deseas)
+    constant C_NBITS : natural := 32;
+    constant C_NELEM : natural := 8;
+
+    -- Período de reloj (100 MHz)
+    constant CLK_PERIOD : time := 10 ns;
+
+    -- Señales de estímulo
+    signal clk     : std_logic := '0';
+    signal rst     : std_logic := '0';
+    signal hab     : std_logic := '0';
+    signal dato_in : std_logic_vector(C_NBITS - 1 downto 0) := (others => '0');
+
+    -- Señal de salida observada
+    signal Q       : std_logic_vector(C_NBITS - 1 downto 0);
+
+    -- Control de fin de simulación
+    signal sim_finished : boolean := false;
+
+    -- Tipo auxiliar solo para cargar los datos de prueba en el testbench
+    type test_array is array (0 to C_NELEM - 1) of integer;
+    constant DATOS_PRUEBA : test_array := (45, 12, 89, 3, 77, 21, 100, 5);
+
+begin
+
+    --====================================================================
+    -- 1. INSTANCIACIÓN DEL DUT
+    --====================================================================
+    DUT: entity work.ordenador_CeleYLucas
+        generic map(
+            Nbits => C_NBITS,
+            Nelem => C_NELEM
+        )
+        port map(
+            clk     => clk,
+            rst     => rst,
+            hab     => hab,
+            dato_in => dato_in,
+            Q       => Q
+        );
+
+    --====================================================================
+    -- 2. GENERADOR DE CLOCK
+    --====================================================================
+    process
+    begin
+        while not sim_finished loop
+            clk <= '0';
+            wait for CLK_PERIOD / 2;
+            clk <= '1';
+            wait for CLK_PERIOD / 2;
+        end loop;
+        wait;
+    end process;
+
+    --====================================================================
+    -- 3. PROCESO DE ESTÍMULOS
+    --====================================================================
+    process
+    begin
+        -- Estado inicial: Reset activo en bajo
+        rst <= '0';
+        hab <= '0';
+        dato_in <= (others => '0');
+        wait for CLK_PERIOD * 2;
+
+        -- Liberar reset en flanco de bajada
+        wait until falling_edge(clk);
+        rst <= '1';
+        wait for CLK_PERIOD;
+
+        ------------------------------------------------------------------
+        -- FASE 1: CARGA DE DATOS EN SERIE (hab = '0')
+        ------------------------------------------------------------------
+        report "--- Iniciando carga serie de datos ---";
+        hab <= '0';
+        
+        for i in 0 to C_NELEM - 1 loop
+            dato_in <= std_logic_vector(to_unsigned(DATOS_PRUEBA(i), C_NBITS));
+            wait until rising_edge(clk);
+        end loop;
+
+        dato_in <= (others => '0');
+
+        ------------------------------------------------------------------
+        -- FASE 2: PROCESO DE ORDENAMIENTO (hab = '1')
+        ------------------------------------------------------------------
+        report "--- Habilitando ordenamiento (hab = '1') ---";
+        hab <= '1';
+
+        -- El algoritmo Odd-Even Sort requiere al menos Nelem ciclos completos
+        wait for CLK_PERIOD * C_NELEM;
+
+        ------------------------------------------------------------------
+        -- FASE 3: DESPLAZAMIENTO / LECTURA DE SALIDA (hab = '0')
+        ------------------------------------------------------------------
+        report "--- Leyendo salida por Q (desplazando con hab = '0') ---";
+        hab <= '0';
+
+        for i in 0 to C_NELEM - 1 loop
+            wait until rising_edge(clk);
+            report "Dato que sale por Q (" & integer'image(i) & "): " & 
+                   integer'image(to_integer(unsigned(Q)));
+        end loop;
+
+        wait for CLK_PERIOD * 2;
+        report "--- Simulación finalizada con éxito ---" severity note;
+        sim_finished <= true;
+        wait;
+    end process;
+
+end architecture sim;

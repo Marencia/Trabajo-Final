@@ -1,0 +1,64 @@
+entity BITONIC_8_CLK is
+    port(
+        clk    : in  std_logic;
+        reset  : in  std_logic;
+        DATOS  : in  VEC_DATOS;
+        SALIDA : out VEC_DATOS
+    );
+end BITONIC_8_CLK;
+
+architecture Pipelined of BITONIC_8_CLK is
+
+    -- Señales que ahora se conectarán a las salidas de los Flip-Flops de cada etapa
+    signal REG_ETAPA_1 : VEC_DATOS;
+    signal REG_ETAPA_2 : VEC_DATOS;
+    -- ... declaras el resto de los registros hasta el final
+    
+    -- Cables combinacionales internos para las salidas instantáneas de los CAS
+    signal cas1_out, cas2_out : VEC_DATOS;
+
+begin
+
+    ------------------------------------------------------------------
+    -- ETAPA 1: Lógica combinacional pura
+    ------------------------------------------------------------------
+    CAS1_1: entity work.CAS_UP
+    port map(D1 => DATOS(0), D2 => DATOS(1), Y1 => cas1_out(0), Y2 => cas1_out(1));
+    
+    CAS1_2: entity work.CAS_DOWN
+    port map(D1 => DATOS(2), D2 => DATOS(3), Y1 => cas1_out(2), Y2 => cas1_out(3));
+    
+    -- ... (el resto de los CAS de la etapa 1 llenan 'cas1_out')
+
+    ------------------------------------------------------------------
+    -- ETAPA 2: Lógica combinacional toma los datos YA REGISTRADOS de la Etapa 1
+    ------------------------------------------------------------------
+    CAS2_1: entity work.CAS_DOWN
+    port map(D1 => REG_ETAPA_1(0), D2 => REG_ETAPA_1(2), Y1 => cas2_out(0), Y2 => cas2_out(2));
+    
+    -- ... (el resto de los CAS de la etapa 2 llenan 'cas2_out')
+
+
+    ------------------------------------------------------------------
+    -- PROCESO SÍNCRONO: Aquí es donde se crean los Flip-Flops (Registros)
+    ------------------------------------------------------------------
+    process(clk)
+    begin
+        if rising_edge(clk) then
+            if reset = '1' then
+                REG_ETAPA_1   <= (others => (others => '0'));
+                REG_ETAPA_2   <= (others => (others => '0'));
+                SALIDA        <= (others => (others => '0'));
+            else
+                -- En cada flanco de subida, los resultados combinacionales 
+                -- se "capturan" y se salvan en los Flip-Flops para la siguiente etapa
+                REG_ETAPA_1 <= cas1_out;
+                REG_ETAPA_2 <= cas2_out;
+                
+                -- Al final del pipeline, la última etapa va directo a la salida registrada
+                -- SALIDA   <= cas6_out; 
+            end if;
+        end if;
+    end process;
+
+end Pipelined;

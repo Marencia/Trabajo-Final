@@ -1,0 +1,87 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+
+entity CAS_4 is
+	
+	port(
+		D1,D2,D3,D4: in std_logic_vector ;
+		Y1,Y2,Y3,Y4: OUT INTEGER
+	);
+end CAS_4;
+
+architecture Behavior of CAS_4 is
+
+begin
+--la consigna seria hacerlo lo mas ineficiente posible, i know, el prox paso es hacerlo con vectores
+	process(all)
+		variable v1,v2,v3,v4  : INTEGER;
+		variable aux : INTEGER;
+	begin
+		
+		v1 := D1;
+		v2 := D2;
+		v3 := D3;
+		v4 := D4;
+		
+		if v1<v2 then
+			v1 := v1;
+			v2 := v2;
+		else
+			aux:= v1;
+			v1 := v2;
+			v2 := aux;
+		end if;
+		
+		if v3>v4 then
+			v3 := v3;
+			v4 := v4;
+		else	
+			aux:= v4;
+			v4 := v3;
+			v3 := aux;
+		end if;
+		
+		if v1<v3 then
+			v1 := v1;
+			v3 := v3;
+		else
+			aux:= v1;
+			v1 := v3;
+			v3 := aux;
+		end if;
+		
+			if v2<v4 then
+			v2 := v2;
+			v4 := v4;
+		else	
+			aux:= v4;
+			v4 := v2;
+			v2 := aux;
+		end if;
+		
+		if v1<v2 then
+			v1 := v1;
+			v2 := v2;
+		else
+			aux:= v1;
+			v1 := v2;
+			v2 := aux;
+		end if;
+		
+		if v3<v4 then
+			v3 := v3;
+			v4 := v4;
+		else	
+			aux:= v4;
+			v4 := v3;
+			v3 := aux;
+		end if;
+		
+		Y1<= v1;
+		Y2<= v2;
+		Y3<= v3;
+		Y4<= v4;
+	
+	end process;
+		
+end Behavior;
